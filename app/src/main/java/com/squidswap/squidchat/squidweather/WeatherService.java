@@ -1,6 +1,7 @@
 package com.squidswap.squidchat.squidweather;
 
 import android.content.Context;
+import android.location.Location;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -8,6 +9,10 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.lang.reflect.Method;
 
@@ -37,5 +42,22 @@ public class WeatherService{
         });
 
         this.req.add(test);
+    }
+
+    //Sends a qurie to the DarkSky api to pull forcast data.
+    public void GetForcast(Location loc, final ServiceInterface serv){
+        StringRequest forcast = new StringRequest(Request.Method.GET, "https://api.darksky.net/forecast/84fc2ffca1d3a91019d6047b66fba90e/"+loc.getLatitude()+","+loc.getLongitude(), new Response.Listener<String>() {
+            @Override
+            public void onResponse(String response) {
+                serv.onWeatherRecieved(response);
+            }
+        }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                serv.onWeatherError(error.toString());
+            }
+        });
+
+        this.req.add(forcast);
     }
 }

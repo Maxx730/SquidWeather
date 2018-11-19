@@ -4,4 +4,14 @@
     <color name="colorPrimaryDark">#000000</color>
     <color name="colorAccent">#59BA55</color>
     <color name="blueBackground">#4C799D</color>
+    <color name="cold_text">#286E7A</color>
+    <color name="loading_start">#D2D6D9</color>
+    <color name="loading_end">#B7BABD</color>
+    <color name="medium_start">#DAFA2E</color>
+    <color name="medium_end">#A3BA23</color>
+    <color name="temp_freezing">#DAFDFF</color>
+    <color name="temp_25">#58F4FF</color>
+    <color name="temp_50">#17A8B2</color>
+    <color name="temp_75">#FF8A4C</color>
+    <color name="temp_100">#FF691A</color>
 </resources>

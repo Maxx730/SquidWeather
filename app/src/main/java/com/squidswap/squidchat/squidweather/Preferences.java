@@ -9,8 +9,10 @@ import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.View;
+import android.widget.RelativeLayout;
 
 public class Preferences extends Activity {
+    private static RelativeLayout TopLayout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
