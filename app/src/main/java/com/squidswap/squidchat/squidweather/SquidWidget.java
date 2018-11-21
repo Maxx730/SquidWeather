@@ -18,6 +18,7 @@ import org.json.JSONObject;
 public class SquidWidget extends AppWidgetProvider {
 
     private static String LocationText = "";
+    public static final String INFO_UPDATE = "SquidWeather.INFO_UPDATE";
 
     static void updateAppWidget(final Context context, AppWidgetManager appWidgetManager,
                                 int appWidgetId) {
@@ -50,6 +51,14 @@ public class SquidWidget extends AppWidgetProvider {
     @Override
     public void onDisabled(Context context) {
         // Enter relevant functionality for when the last widget is disabled
+    }
+
+    @Override
+    public void onReceive(Context context, Intent intent) {
+        super.onReceive(context, intent);
+        if(intent.getAction().equals(INFO_UPDATE)){
+            System.out.println("Got data from activity!!!");
+        }
     }
 }
 

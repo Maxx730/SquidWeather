@@ -9,6 +9,11 @@
     <string name="forcast_nav">Forecast</string>
     <string name="widget_update">Update</string>
 
+    <string name="graph_animation_speed">Graph Animation Speed</string>
+    <string name="animation_slow">Slow</string>
+    <string name="animation_normal">Normal</string>
+    <string name="animation_fast">Fast</string>
+
     <!-- Strings related to Settings -->
 
     <!-- Example General settings -->
@@ -56,9 +61,9 @@
     </string-array>
 
     <string-array name="list_preference_entries">
-        <item>Entry 1</item>
-        <item>Entry 2</item>
-        <item>Entry 3</item>
+        <item>Slow</item>
+        <item>Normal</item>
+        <item>Fast</item>
     </string-array>
 
     <string-array name="list_preference_entry_values">
