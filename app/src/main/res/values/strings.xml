@@ -13,6 +13,7 @@
     <string name="animation_slow">Slow</string>
     <string name="animation_normal">Normal</string>
     <string name="animation_fast">Fast</string>
+    <string name="defaultNotificationText">Location NOT set to Default</string>
 
     <!-- Strings related to Settings -->
 

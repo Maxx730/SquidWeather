@@ -15,6 +15,7 @@ import android.os.Bundle;
 import android.os.Debug;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
+import android.support.constraint.ConstraintLayout;
 import android.support.design.widget.BottomNavigationView;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -60,8 +61,12 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
+
+import Util.DateUtils;
+import Util.IconUtil;
 
 public class SquidReports extends AppCompatActivity {
     private LayoutInflater inflate;
@@ -80,8 +85,8 @@ public class SquidReports extends AppCompatActivity {
     private AlertDialog alert;
 
     //Grab all of the layouts for the application.
-    private static RelativeLayout MainContainer,WeatherLayout,SettingsShade,SettingsView,WeatherBackground,TopData,MainData,ExtraDetails,ResultsShade;
-    private static LinearLayout FlickView;
+    private static RelativeLayout MainContainer,WeatherLayout,SettingsShade,SettingsView,WeatherBackground,TopData,MainData,ResultsShade;
+    private static LinearLayout FlickView,ExtraDetails,ForcastDays;
     private TextView TemperatureText,LocationText,MainText,LongitudeText,LatitudeText;
     private ImageButton RefreshButton,SettingsButton,CloseResults,DefaultLocationButton;
     private ImageView TempIcon,IndicationIcon;
@@ -142,7 +147,7 @@ public class SquidReports extends AppCompatActivity {
         SettingsView = (RelativeLayout) WeatherLayout.findViewById(R.id.SettingsFragment);
         WeatherBackground = (RelativeLayout) WeatherLayout.findViewById(R.id.WeatherBackground);
         MainData = (RelativeLayout) WeatherLayout.findViewById(R.id.MainData);
-        ExtraDetails = (RelativeLayout) WeatherLayout.findViewById(R.id.ExtraDetails);
+        ExtraDetails = (LinearLayout) WeatherLayout.findViewById(R.id.ExtraDetails);
         TopData = (RelativeLayout) WeatherLayout.findViewById(R.id.TopData);
         ResultsShade = (RelativeLayout) WeatherLayout.findViewById(R.id.ResultsShade);
 
@@ -153,8 +158,6 @@ public class SquidReports extends AppCompatActivity {
         RefreshButton = (ImageButton) WeatherLayout.findViewById(R.id.RefreshButton);
         SettingsButton = (ImageButton) WeatherLayout.findViewById(R.id.SettingsButton);
         CloseSettings = (Button) WeatherLayout.findViewById(R.id.CloseSettings);
-        LongitudeText = (TextView) WeatherLayout.findViewById(R.id.LongitudeText);
-        LatitudeText = (TextView) WeatherLayout.findViewById(R.id.LatitudeText);
         SearchField = (EditText) WeatherLayout.findViewById(R.id.LocationSearchText);
         TempIcon = (ImageView) WeatherLayout.findViewById(R.id.TempIcon);
         IndicationIcon = (ImageView) WeatherLayout.findViewById(R.id.IndicationIcon);
@@ -173,6 +176,18 @@ public class SquidReports extends AppCompatActivity {
                 edit = prefs.edit();
                 edit.putFloat("default_lat",(float) loc.getLocation().getLatitude());
                 edit.putFloat("default_lon",(float) loc.getLocation().getLongitude());
+                //pull information about the given location
+                service.GetCurrent(loc.getLocation().toString(), new ServiceInterface() {
+                    @Override
+                    public void onWeatherRecieved(String reponse) {
+                        cache.SaveCache(reponse);
+                    }
+
+                    @Override
+                    public void onWeatherError(String error) {
+
+                    }
+                });
                 edit.apply();
             }
         });
@@ -282,6 +297,7 @@ public class SquidReports extends AppCompatActivity {
                                             loca.setLongitude(locations.get(position).getLongitude());
 
                                             loc.setLocation(loca);
+                                            //Here we want to do another request to the API to save the new data to our cache
                                             LocationSearchInput.setText("");
                                             PullInfo(false,false);
                                         }
@@ -318,10 +334,11 @@ public class SquidReports extends AppCompatActivity {
 
         //First we need ot determine if we are going to be pulling from the API or be
         //using our cache to load the data.
+        //We are also going to need to check to see if the location has been changed.
         if(quer.AllowPull()){
-            PullInfo(false,false);
+            PullInfo(true,false);
         }else{
-            PullInfo(false,true);
+            PullInfo(true,true);
         }
     }
 
@@ -342,7 +359,50 @@ public class SquidReports extends AppCompatActivity {
             pos = loc.getLocation();
         }
 
-        ForecastGraph = (LineChart) WeatherLayout.findViewById(R.id.ForecastChart);
+        service.GetForcast(pos, new ServiceInterface() {
+            @Override
+            public void onWeatherRecieved(String reponse) {
+                LinearLayout ForcastDays = (LinearLayout) findViewById(R.id.ForcastLayout);
+                LayoutInflater inflate = getLayoutInflater();
+                Calendar cal = Calendar.getInstance();
+                int today = cal.get(Calendar.DAY_OF_WEEK);
+
+                ForcastDays.removeAllViews();
+
+                try {
+                    JSONObject forc = new JSONObject(reponse);
+                    JSONArray days = forc.getJSONObject("daily").getJSONArray("data");
+
+                    for(int i = 0;i < days.length() - 4;i++) {
+                        Log.d("DAY:",String.valueOf(i));
+                        Log.d("DATA",days.getJSONObject(i).toString());
+                        View childLay = inflate.inflate(R.layout.forcast_item,null);
+                        childLay.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,LinearLayout.LayoutParams.MATCH_PARENT,1.0f));
+
+                        TextView DayText = (TextView) childLay.findViewById(R.id.DayOfWeek);
+                        TextView TempHigh = (TextView) childLay.findViewById(R.id.TempHigh);
+                        TextView TempLow = (TextView) childLay.findViewById(R.id.TempLow);
+                        ImageView ForecastIcon = (ImageView) childLay.findViewById(R.id.ForecastIcon);
+
+                        ForecastIcon.setImageDrawable(IconUtil.getWeatherIcon(days.getJSONObject(i).getString("icon"),getApplicationContext()));
+                        DayText.setText(DateUtils.getDayName(today + i));
+                        TempHigh.setText(String.valueOf((int) days.getJSONObject(i).getDouble("temperatureHigh")) + (char) 0x00B0);
+                        TempLow.setText(String.valueOf((int) days.getJSONObject(i).getDouble("temperatureLow")) + (char) 0x00B0);
+
+                        ForcastDays.addView(childLay);
+                    }
+                } catch(JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            @Override
+            public void onWeatherError(String error) {
+
+            }
+        });
+
+        //ForecastGraph = (LineChart) WeatherLayout.findViewById(R.id.ForecastChart);
 
         if(fromCache){
             Log.d("LOGIC FLOW","Pulling data from cache.");
@@ -362,9 +422,6 @@ public class SquidReports extends AppCompatActivity {
                 }
             });
         }
-
-        LongitudeText.setText(String.valueOf(Math.floor((double) pos.getLongitude())) + ", ");
-        LatitudeText.setText(String.valueOf(Math.floor((double) pos.getLatitude())));
 
         APP_LOCATION = prefs.getString("api_zipcode","33573");
     }
@@ -393,10 +450,12 @@ public class SquidReports extends AppCompatActivity {
                 entries.add(new Entry(i,(int) hourly_data.getJSONObject(i).getDouble("temperatureHigh")));
             }
 
+            /*
             LineDataSet forecasts = new LineDataSet(entries,"Day");
             forecasts.setColor(getResources().getColor(android.R.color.background_light));
             forecasts.setLineWidth(3);
             forecasts.setDrawCircles(prefs.getBoolean("graph_dots",false));
+            forecasts.setDrawFilled(false);
 
             if(prefs.getBoolean("curve_graph",true)){
                 forecasts.setMode(LineDataSet.Mode.HORIZONTAL_BEZIER);
@@ -423,7 +482,7 @@ public class SquidReports extends AppCompatActivity {
             yl.setDrawAxisLine(false);
             yr.setDrawAxisLine(false);
             yr.setDrawLabels(false);
-            yl.setDrawLabels(true);
+            yl.setDrawLabels(false);
             yl.setDrawGridLines(prefs.getBoolean("graph_gridlines",false));
             yl.setDrawZeroLine(true);
             yl.setGridColor(Color.parseColor("#FFFFFF"));
@@ -443,10 +502,12 @@ public class SquidReports extends AppCompatActivity {
             ForecastGraph.getDescription().setEnabled(false);
             ForecastGraph.setContentDescription("");
             ForecastGraph.animateX(300);
-            ForecastGraph.setPadding(40,0,40,0);
+            ForecastGraph.setPadding(0,0,0,0);
             ForecastGraph.setTouchEnabled(false);
             ForecastGraph.setData(finalFor);
             ForecastGraph.invalidate();
+            ForecastGraph.setBackgroundColor(getResources().getColor(android.R.color.transparent));
+            */
 
             //Logic for the Top Data Card
             JSONObject repObj = new JSONObject(reponse);
@@ -496,6 +557,8 @@ public class SquidReports extends AppCompatActivity {
                 TemperatureText.setTextColor(getResources().getColor(R.color.temp_100));
                 WeatherBackground.setBackground(getResources().getDrawable(R.drawable.warm_gradient));
                 IndicationIcon.setColorFilter(getResources().getColor(R.color.temp_100));
+                IndicationIcon.setColorFilter(getResources().getColor(R.color.temp_100));
+                DefaultLocationButton.setColorFilter(getResources().getColor(R.color.temp_100));
                 BACKGROUND_TEMP = R.drawable.warm_gradient;
             }else if(repObj.getJSONObject("currently").getDouble("temperature") > 70){
                 TempIcon.setImageDrawable(getResources().getDrawable(R.drawable.ic_thermometer_75));
@@ -503,6 +566,8 @@ public class SquidReports extends AppCompatActivity {
                 TemperatureText.setTextColor(getResources().getColor(R.color.temp_75));
                 WeatherBackground.setBackground(getResources().getDrawable(R.drawable.warm_gradient));
                 IndicationIcon.setColorFilter(getResources().getColor(R.color.temp_75));
+                RefreshButton.setColorFilter(getResources().getColor(R.color.temp_75));
+                DefaultLocationButton.setColorFilter(getResources().getColor(R.color.temp_75));
                 BACKGROUND_TEMP = R.drawable.warm_gradient;
             }else if(repObj.getJSONObject("currently").getDouble("temperature") > 40){
                 TempIcon.setImageDrawable(getResources().getDrawable(R.drawable.ic_thermometer_50));
@@ -510,6 +575,8 @@ public class SquidReports extends AppCompatActivity {
                 TemperatureText.setTextColor(getResources().getColor(R.color.medium_end));
                 WeatherBackground.setBackground(getResources().getDrawable(R.drawable.medium_gradient));
                 IndicationIcon.setColorFilter(getResources().getColor(R.color.medium_end));
+                RefreshButton.setColorFilter(getResources().getColor(R.color.medium_end));
+                DefaultLocationButton.setColorFilter(getResources().getColor(R.color.medium_end));
                 BACKGROUND_TEMP = R.drawable.medium_gradient;
             }else if(repObj.getJSONObject("currently").getDouble("temperature") > 0){
                 TempIcon.setImageDrawable(getResources().getDrawable(R.drawable.ic_thermometer_25));
@@ -517,6 +584,8 @@ public class SquidReports extends AppCompatActivity {
                 TemperatureText.setTextColor(getResources().getColor(R.color.cold_text));
                 WeatherBackground.setBackground(getResources().getDrawable(R.drawable.cold_gradient));
                 IndicationIcon.setColorFilter(getResources().getColor(R.color.cold_text));
+                RefreshButton.setColorFilter(getResources().getColor(R.color.cold_text));
+                DefaultLocationButton.setColorFilter(getResources().getColor(R.color.cold_text));
                 BACKGROUND_TEMP = R.drawable.cold_gradient;
             }
         }catch(JSONException e){
